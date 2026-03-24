@@ -44,6 +44,7 @@ Every repo, no exceptions:
 | `DESIGN.md` | Overview of `design/` dir | Kept in sync with current implementation. |
 | `RESEARCH.md` | Overview of `research/` dir | Summary of status of all research items. |
 | `BACKLOG.md` | Overview of `backlog/` dir | Priorities and statuses. Links to `backlog/`. |
+| `PLANS.md` | Overview of `plans/` dir | Index of significant task plans and execution status. |
 | `.gitignore` | Exclude build artifacts and secrets | Never ignore source files. Never commit secrets. |
 | `LICENSE` | Legal clarity | Omit only for internal proprietary repos. |
 | `CHANGELOG.md` | Notable changes over time | Even solo projects need this. |
@@ -73,6 +74,7 @@ project-root/
 ├── DESIGN.md             # Overview of docs/design/ dir
 ├── RESEARCH.md           # Overview of docs/research/ dir
 ├── BACKLOG.md            # Overview of docs/backlog/ dir
+├── PLANS.md              # Overview of docs/plans/ dir
 ├── CHANGELOG.md
 ├── LICENSE
 ├── .gitignore
@@ -248,6 +250,10 @@ Contains: status of each research item (`ACTIVE`, `EXPERIMENT`, `IDEA`,
 Contains: priorities and statuses for all backlog items.
 Links to individual files in `docs/backlog/`.
 
+**`PLANS.md`** — Overview of all content in `docs/plans/`.
+Contains: active and completed plan files with current execution status.
+Links to individual files in `docs/plans/`.
+
 ---
 
 ## Step 5: Agent Workflow Files
@@ -259,6 +265,7 @@ Generated at repo creation using the bundled template.
 See `references/AGENTS_TEMPLATE.md` for the full ready-to-copy file.
 
 Sections in AGENTS.md:
+- Project Documents (canonical file/directory index for onboarding agents)
 - Documentation Rules (the full rule set from Step 4)
 - Design Sync Rule
 - Changelog Maintenance
@@ -296,6 +303,10 @@ Committing them is encouraged — they are a record of thinking.
 
 ### Plan Files
 
+`PLANS.md` at root — the index:
+- Lists active, pending-approval, and completed plan files.
+- Links to individual files in `docs/plans/`.
+
 Location: `docs/plans/PLAN_<AGENT_NAME>_<PLAN_SUMMARY>.md`
 
 When to create:
@@ -307,6 +318,9 @@ File structure — two sections:
 **Top section (written before approval, never modified after):**
 - Goal
 - Numbered steps
+- Constraints (scope boundaries, things this task must not break)
+- Definition of done (observable outcomes that must be true)
+- Reporting expectations (what the agent must report back)
 - Dependencies or risks
 
 **Bottom section (appended after execution):**
@@ -344,8 +358,7 @@ When bootstrapping a repo for a user:
 3. **Generate** the content of key files:
    - `CLAUDE.md` (two lines, always)
    - `AGENTS.md` (from `references/AGENTS_TEMPLATE.md`, fill in Agent Roles)
-   - `DESIGN.md` and `RESEARCH.md` stubs
-   - `BACKLOG.md` stub
+   - `DESIGN.md`, `RESEARCH.md`, `BACKLOG.md`, and `PLANS.md` stubs
    - `LICENSE` unless the repo is internal/proprietary
    - `CHANGELOG.md` stub
    - `.gitignore` and stack-specific config files
@@ -366,6 +379,9 @@ Don't dump everything at once if the project is simple.
 - `references/AGENTS_TEMPLATE.md` — Ready-to-copy AGENTS.md for any project.
   Load this when generating the AGENTS.md for a new repo.
 
-- `references/TEMPLATES.md` — Templates for RFC, ADR, spec, research note,
-  backlog item, and plan files. Load when the user asks for a template
-  or when generating design artifacts.
+- `references/TEMPLATES.md` — Templates for root-level files (README, CLAUDE.md,
+  DESIGN.md, RESEARCH.md, BACKLOG.md, PLANS.md, CHANGELOG.md, LICENSE).
+
+- `references/TEMPLATES_ARTIFACTS.md` — Templates for RFC, ADR, spec, research
+  note, backlog item, and plan files. Load when the user asks for a template,
+  when generating design artifacts, or when generating backlog/plan files.

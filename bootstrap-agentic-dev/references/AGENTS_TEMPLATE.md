@@ -15,6 +15,7 @@ This section should help a new agent understand where the important context live
 - `DESIGN.md` — living implementation and architecture contract
 - `RESEARCH.md` — index of research notes, experiments, and findings
 - `BACKLOG.md` — prioritized queue of planned and in-progress work
+- `PLANS.md` — index of significant task plans and execution status
 - `docs/design/` — deeper RFCs, ADRs, specs, and design support docs
 - `docs/research/` — detailed research artifacts, benchmarks, and feasibility notes
 - `docs/backlog/` — individual backlog item files
@@ -72,7 +73,8 @@ If a file exceeds 400 lines or 8000 total words:
 Multiple `.md` files may reference the same `.md` file.
 Referencing forms a **graph**, not a strict tree.
 Wikipedia-style cross-linking is encouraged.
-Every document must be reachable from at least one root-level overview file.
+Every document must be reachable from at least one root-level overview file:
+`DESIGN.md`, `RESEARCH.md`, `BACKLOG.md`, or `PLANS.md`.
 
 ### Directory Organization
 
@@ -116,6 +118,10 @@ Possible statuses for research items:
 **`BACKLOG.md`** — Overview of all content in `docs/backlog/`.
 Contains priorities and statuses for all backlog items.
 Links to individual files in `docs/backlog/`.
+
+**`PLANS.md`** — Overview of all content in `docs/plans/`.
+Contains active and completed plan files with their execution status.
+Links to individual files in `docs/plans/`.
 
 ---
 
