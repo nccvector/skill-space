@@ -37,6 +37,7 @@ make run
 - [Backlog](BACKLOG.md)
 - [Agent rules](AGENTS.md)
 
+<!-- Include this section only if CONTRIBUTING.md exists -->
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).

@@ -241,7 +241,8 @@ Contains: status of each design artifact (`DRAFT`, `UNDER_REVIEW`,
 Agents must update this whenever implementation changes.
 
 **`RESEARCH.md`** — Overview of all content in `docs/research/`.
-Contains: status of each item (Active, Experiment, Idea, Archived, Implemented).
+Contains: status of each research item (`ACTIVE`, `EXPERIMENT`, `IDEA`,
+`COMPLETE`, `IMPLEMENTED`, `ARCHIVED`).
 
 **`BACKLOG.md`** — Overview of all content in `docs/backlog/`.
 Contains: priorities and statuses for all backlog items.
@@ -260,6 +261,7 @@ See `references/AGENTS_TEMPLATE.md` for the full ready-to-copy file.
 Sections in AGENTS.md:
 - Documentation Rules (the full rule set from Step 4)
 - Design Sync Rule
+- Changelog Maintenance
 - Backlog Management
 - Planning Workflow
 - Format Exceptions

@@ -116,6 +116,18 @@ Keeping it current is not optional.
 
 ---
 
+## Changelog Maintenance
+
+Agents must update `CHANGELOG.md` when they complete a user-facing change.
+
+- Add entries under the `## Unreleased` section.
+- Use subsections: `### Added`, `### Changed`, `### Fixed`, `### Removed`.
+- One bullet per change. Keep it concise.
+- The user (not agents) is responsible for moving entries from
+  `Unreleased` to a versioned section at release time.
+
+---
+
 ## Backlog Management
 
 ### Structure
