@@ -355,6 +355,12 @@ Lead with structure. Offer to go deeper on any section.
   note, backlog item, and plan files. Load when the user asks for a template,
   when generating design artifacts, or when generating backlog/plan files.
 
+- `references/MIGRATION_GUIDE.md` — How to adopt these conventions in an
+  existing repo. Load when the user wants to reorganize, migrate, or
+  retrofit structure onto a legacy codebase. Covers: inventory, profile
+  selection, index-first strategy, gradual renaming, exception policy,
+  and recommended commit sequence.
+
 ## Profiles
 
 Three profiles control how much structure a repo gets:
