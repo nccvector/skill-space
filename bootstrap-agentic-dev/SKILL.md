@@ -136,45 +136,14 @@ Schema definitions, default configs, environment-specific configs.
 
 Layer these on top of the universal layout:
 
-**Python:**
-```
-pyproject.toml        # single source of truth for deps + tooling
-requirements.txt      # only if pyproject.toml isn't sufficient
-```
-
-**Rust:**
-```
-Cargo.toml
-Cargo.lock            # commit for binaries; gitignore for libraries
-```
-
-**Node.js / TypeScript:**
-```
-package.json
-tsconfig.json
-.nvmrc                # pin the Node version
-```
-
-**C / C++:**
-```
-CMakeLists.txt or BUILD.bazel — pick one, don't switch
-include/              # public headers only
-```
-
-**ROS 2 / Robotics:**
-```
-package.xml
-CMakeLists.txt or setup.py
-launch/               # launch files
-config/               # parameter YAML files
-```
-
-**Embedded / Firmware:**
-```
-CMakeLists.txt or platformio.ini
-linker/               # linker scripts
-hal/                  # hardware abstraction layer
-```
+| Stack | Key Files | Notes |
+|-------|-----------|-------|
+| Python | `pyproject.toml`, `requirements.txt` | pyproject.toml is single source of truth |
+| Rust | `Cargo.toml`, `Cargo.lock` | Commit lock for binaries, gitignore for libraries |
+| Node/TS | `package.json`, `tsconfig.json`, `.nvmrc` | Pin Node version |
+| C/C++ | `CMakeLists.txt` or `BUILD.bazel`, `include/` | Pick one build system |
+| ROS 2 | `package.xml`, `CMakeLists.txt`, `launch/`, `config/` | — |
+| Embedded | `CMakeLists.txt` or `platformio.ini`, `linker/`, `hal/` | — |
 
 ---
 
@@ -398,3 +367,25 @@ Don't dump everything at once if the project is simple.
 - `references/TEMPLATES_ARTIFACTS.md` — Templates for RFC, ADR, spec, research
   note, backlog item, and plan files. Load when the user asks for a template,
   when generating design artifacts, or when generating backlog/plan files.
+
+## Scripts
+
+Self-contained shell scripts for automation. Copied into bootstrapped repos.
+
+- `scripts/check_docs.sh` — Policy linter. Enforces naming conventions,
+  line/word limits, required files, and index references. Use `--ci` for
+  non-zero exit on violations. Works as a pre-commit hook.
+
+- `scripts/bootstrap_doc.sh` — Artifact generator. Creates a doc from
+  template and updates the parent index atomically.
+  Usage: `./scripts/bootstrap_doc.sh <type> <title> [--agent <name>]`
+  Types: `rfc`, `adr`, `spec`, `research`, `backlog`, `plan`.
+
+- `scripts/update_indexes.sh` — Index rebuilder. Regenerates root overview
+  files (DESIGN.md, RESEARCH.md, BACKLOG.md, PLANS.md) from actual files
+  in `docs/`. Usage: `./scripts/update_indexes.sh [--dry-run] [design|...]`
+
+- `scripts/bootstrap_repo.sh` — One-shot scaffolding. Creates a full repo
+  skeleton with all required files, stack-specific config, and utility scripts.
+  Usage: `./scripts/bootstrap_repo.sh --name <project> --stack <stack>`
+  Stacks: `python`, `rust`, `node`, `cpp`, `ros2`, `embedded`, `none`.
