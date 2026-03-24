@@ -8,6 +8,17 @@
 
 set -euo pipefail
 
+# Source shared library
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB="$SCRIPT_DIR/lib.sh"
+source "$LIB"
+
+# Check if reference templates are available (skill directory vs copied repo)
+REFS_DIR="$SCRIPT_DIR/../references"
+ARTIFACTS_FILE="$REFS_DIR/TEMPLATES_ARTIFACTS.md"
+HAS_REFS=false
+[[ -f "$ARTIFACTS_FILE" ]] && HAS_REFS=true
+
 # --- Parse arguments ---
 if [[ $# -lt 2 ]]; then
   echo "Usage: $0 <type> <title> [--agent <name>] [--author <name>]"
@@ -22,7 +33,6 @@ TITLE=""
 AGENT=""
 AUTHOR=""
 
-# Collect title words until we hit a flag
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --agent)  AGENT="$2"; shift 2 ;;
@@ -44,11 +54,14 @@ if [[ -z "$TITLE" ]]; then
 fi
 
 if [[ "$DOC_TYPE" == "plan" ]] && [[ -z "$AGENT" ]]; then
-  echo "Error: --agent is required for plan type."
-  exit 1
+  # Try reading default agent from bootstrap.env
+  AGENT="$(read_bootstrap_env AGENTS "" | cut -d, -f1)"
+  if [[ -z "$AGENT" ]]; then
+    echo "Error: --agent is required for plan type."
+    exit 1
+  fi
 fi
 
-# Default author from git config
 if [[ -z "$AUTHOR" ]]; then
   AUTHOR="$(git config user.name 2>/dev/null || echo "Unknown")"
 fi
@@ -60,29 +73,7 @@ cd "$REPO_ROOT"
 TODAY="$(date +%Y-%m-%d)"
 TODAY_UNDER="$(date +%Y_%m_%d)"
 
-# --- Normalize title to ALL_CAPS_WITH_UNDERSCORES ---
-normalize_title() {
-  echo "$1" | tr '[:lower:]' '[:upper:]' | sed 's/[^A-Z0-9]/_/g' | sed 's/__*/_/g' | sed 's/^_//;s/_$//'
-}
-
 NORM_TITLE="$(normalize_title "$TITLE")"
-
-# --- Auto-number for RFC/ADR ---
-next_number() {
-  local prefix="$1"
-  local dir="$2"
-  local max=0
-  if [[ -d "$dir" ]]; then
-    for f in "$dir"/${prefix}_[0-9]*; do
-      [[ -e "$f" ]] || continue
-      num="$(basename "$f" | sed "s/^${prefix}_//" | grep -oE '^[0-9]+' || echo 0)"
-      if [[ "$num" -gt "$max" ]]; then
-        max="$num"
-      fi
-    done
-  fi
-  printf "%04d" $((max + 1))
-}
 
 # --- Determine file path and index file ---
 case "$DOC_TYPE" in
@@ -92,6 +83,7 @@ case "$DOC_TYPE" in
     FILENAME="RFC_${NUM}_${NORM_TITLE}.md"
     INDEX_FILE="DESIGN.md"
     DEFAULT_STATUS="DRAFT"
+    TEMPLATE_SECTION="RFC Template"
     ;;
   adr)
     DIR="docs/design"
@@ -99,24 +91,28 @@ case "$DOC_TYPE" in
     FILENAME="ADR_${NUM}_${NORM_TITLE}.md"
     INDEX_FILE="DESIGN.md"
     DEFAULT_STATUS="ACCEPTED"
+    TEMPLATE_SECTION="ADR Template"
     ;;
   spec)
     DIR="docs/design"
     FILENAME="SPEC_${NORM_TITLE}.md"
     INDEX_FILE="DESIGN.md"
     DEFAULT_STATUS="DRAFT"
+    TEMPLATE_SECTION="Spec Template"
     ;;
   research)
     DIR="docs/research"
     FILENAME="RESEARCH_${TODAY_UNDER}_${NORM_TITLE}.md"
     INDEX_FILE="RESEARCH.md"
     DEFAULT_STATUS="ACTIVE"
+    TEMPLATE_SECTION="Research Note Template"
     ;;
   backlog)
     DIR="docs/backlog"
     FILENAME="BACKLOG_${NORM_TITLE}.md"
     INDEX_FILE="BACKLOG.md"
     DEFAULT_STATUS="IDEA"
+    TEMPLATE_SECTION="Backlog Item Template"
     ;;
   plan)
     DIR="docs/plans"
@@ -124,6 +120,7 @@ case "$DOC_TYPE" in
     FILENAME="PLAN_${NORM_AGENT}_${NORM_TITLE}.md"
     INDEX_FILE="PLANS.md"
     DEFAULT_STATUS="PENDING_APPROVAL"
+    TEMPLATE_SECTION="Plan File Template"
     ;;
   *)
     echo "Error: unknown type '$DOC_TYPE'. Must be: rfc, adr, spec, research, backlog, plan"
@@ -133,19 +130,54 @@ esac
 
 FILEPATH="$DIR/$FILENAME"
 
-# --- Check if file already exists ---
 if [[ -f "$FILEPATH" ]]; then
   echo "Error: $FILEPATH already exists."
   exit 1
 fi
 
-# --- Create directory if needed ---
 mkdir -p "$DIR"
 
-# --- Generate file from template ---
-case "$DOC_TYPE" in
-  rfc)
-    cat > "$FILEPATH" << TEMPLATE
+# ============================================================
+# Template rendering
+# ============================================================
+
+# Apply placeholder substitutions to a template string.
+# Replaces: XXXX (number), Short Title, YYYY-MM-DD, Name, etc.
+render_template() {
+  local tmpl="$1"
+  echo "$tmpl" | sed \
+    -e "s/XXXX/${NUM:-0000}/g" \
+    -e "s/Short Title/${TITLE}/g" \
+    -e "s/Short Summary/${TITLE}/g" \
+    -e "s/Topic Description/${TITLE}/g" \
+    -e "s/Component Name/${TITLE}/g" \
+    -e "s/YYYY-MM-DD/${TODAY}/g" \
+    -e "s/YYYY_MM_DD/${TODAY_UNDER}/g" \
+    -e "s/| Status | DRAFT |/| Status | ${DEFAULT_STATUS} |/" \
+    -e "s/| Status | ACCEPTED |/| Status | ${DEFAULT_STATUS} |/" \
+    -e "s/| Status | IDEA |/| Status | ${DEFAULT_STATUS} |/" \
+    -e "s/| Status | ACTIVE |/| Status | ${DEFAULT_STATUS} |/" \
+    -e "s/| Status | PENDING_APPROVAL |/| Status | ${DEFAULT_STATUS} |/" \
+    -e "s/| Author | Name |/| Author | ${AUTHOR} |/" \
+    -e "s/| Owner | Name |/| Owner | ${AUTHOR} |/" \
+    -e "s/| Deciders | Name, Name |/| Deciders | ${AUTHOR} |/" \
+    -e "s/| Agent | Claude \/ Codex \/ \.\.\. |/| Agent | ${AGENT:-—} |/"
+}
+
+if $HAS_REFS; then
+  # Extract from canonical reference files
+  RAW_TEMPLATE="$(extract_template "$ARTIFACTS_FILE" "$TEMPLATE_SECTION")"
+  if [[ -z "$RAW_TEMPLATE" ]]; then
+    echo "Error: could not extract '$TEMPLATE_SECTION' from $ARTIFACTS_FILE"
+    exit 1
+  fi
+  render_template "$RAW_TEMPLATE" > "$FILEPATH"
+else
+  # Fallback: baked templates (this block is replaced at copy time by bootstrap_repo.sh)
+  # __BAKED_TEMPLATES_START__
+  case "$DOC_TYPE" in
+    rfc)
+      cat > "$FILEPATH" << TEMPLATE
 # RFC-${NUM}: ${TITLE}
 
 | Field | Value |
@@ -182,10 +214,10 @@ Description. Why this wasn't chosen.
 
 - Link to related issue, ADR, or prior art
 TEMPLATE
-    ;;
+      ;;
 
-  adr)
-    cat > "$FILEPATH" << TEMPLATE
+    adr)
+      cat > "$FILEPATH" << TEMPLATE
 # ADR-${NUM}: ${TITLE}
 
 | Field | Value |
@@ -219,10 +251,10 @@ We chose **[option]** because [reason].
 
 - Link to related RFC or prior art
 TEMPLATE
-    ;;
+      ;;
 
-  spec)
-    cat > "$FILEPATH" << TEMPLATE
+    spec)
+      cat > "$FILEPATH" << TEMPLATE
 # ${TITLE} Specification
 
 | Field | Value |
@@ -272,10 +304,10 @@ How errors are represented and propagated.
 |------|---------|--------|
 | ${TODAY} | 0.1.0 | Initial draft |
 TEMPLATE
-    ;;
+      ;;
 
-  research)
-    cat > "$FILEPATH" << TEMPLATE
+    research)
+      cat > "$FILEPATH" << TEMPLATE
 # Research: ${TITLE}
 
 | Field | Value |
@@ -310,10 +342,10 @@ What should happen based on this research?
 
 - Source 1
 TEMPLATE
-    ;;
+      ;;
 
-  backlog)
-    cat > "$FILEPATH" << TEMPLATE
+    backlog)
+      cat > "$FILEPATH" << TEMPLATE
 # Backlog: ${TITLE}
 
 | Field | Value |
@@ -355,10 +387,10 @@ High-level description of how this could be implemented.
 
 - Related backlog items, ADRs, or research notes
 TEMPLATE
-    ;;
+      ;;
 
-  plan)
-    cat > "$FILEPATH" << TEMPLATE
+    plan)
+      cat > "$FILEPATH" << TEMPLATE
 # Plan: ${TITLE}
 
 | Field | Value |
@@ -398,15 +430,16 @@ TEMPLATE
 _(This section is appended by the agent after execution.)_
 _(Do not edit earlier entries — append only.)_
 TEMPLATE
-    ;;
-esac
+      ;;
+  esac
+  # __BAKED_TEMPLATES_END__
+fi
 
 echo "Created: $FILEPATH"
 
-# --- Update parent index file ---
-# Strategy: if the first active table contains a placeholder row (_(none)_),
-# replace it. Otherwise, append after the last row of the first active table.
-# "First active table" = the first table that has a header with "| File".
+# ============================================================
+# Index update
+# ============================================================
 
 insert_table_row() {
   local index="$1"
@@ -418,8 +451,6 @@ insert_table_row() {
     return
   fi
 
-  # Find the first "| File" table. If it contains a _(none)_ placeholder,
-  # replace that placeholder. Otherwise, append after the last row of that table.
   awk -v row="$row" '
     BEGIN { found_header=0; in_first_table=0; replaced=0; last_table_line=0 }
     /^\| File/ && !found_header {
@@ -453,7 +484,6 @@ insert_backlog_entry() {
     return
   fi
 
-  # If there's a placeholder, replace it
   if grep -q '_(no items yet)_' "$index"; then
     awk -v entry="$entry" '
       /\(no items yet\)/ { print entry; next }
@@ -462,7 +492,6 @@ insert_backlog_entry() {
     return
   fi
 
-  # Otherwise, append after the last numbered item
   awk -v entry="$entry" '
     /^[0-9]+\./ { last_num = NR }
     { lines[NR] = $0 }

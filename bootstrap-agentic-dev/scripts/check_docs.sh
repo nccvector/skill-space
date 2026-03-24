@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
 # check_docs.sh — Policy linter for repo doc conventions.
 # Enforces naming, line/word limits, required files, and index references.
+# Profile-aware: reads PROFILE from bootstrap.env to adjust required files.
 # Usage: ./scripts/check_docs.sh [--ci]
 #   --ci  Exit 1 on any violation. Machine-readable output (no color).
 
 set -euo pipefail
+
+# Source shared library
+LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
+source "$LIB"
 
 CI_MODE=false
 if [[ "${1:-}" == "--ci" ]]; then
@@ -36,21 +41,27 @@ pass() {
   printf "${GREEN}OK${RESET}   %s\n" "$1"
 }
 
-# --- Find repo root ---
+# --- Find repo root and read profile ---
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$REPO_ROOT"
 
-echo "${BOLD}Checking docs in: ${REPO_ROOT}${RESET}"
+PROFILE="$(read_bootstrap_env PROFILE "standard")"
+
+echo "${BOLD}Checking docs in: ${REPO_ROOT} (profile: ${PROFILE})${RESET}"
 echo ""
 
 # ============================================================
-# Check 1: Required root-level files
+# Check 1: Required root-level files (profile-dependent)
 # ============================================================
 echo "${BOLD}--- Required Files ---${RESET}"
 
-REQUIRED_FILES="README.md AGENTS.md CLAUDE.md DESIGN.md RESEARCH.md BACKLOG.md .gitignore CHANGELOG.md"
-# LICENSE is required unless explicitly omitted for proprietary repos
-OPTIONAL_REQUIRED="LICENSE"
+# All profiles require these
+REQUIRED_FILES="README.md AGENTS.md CLAUDE.md .gitignore CHANGELOG.md"
+
+# Standard and agentic profiles additionally require index files
+if [[ "$PROFILE" != "minimal" ]]; then
+  REQUIRED_FILES="$REQUIRED_FILES DESIGN.md RESEARCH.md BACKLOG.md"
+fi
 
 for f in $REQUIRED_FILES; do
   if [[ -f "$f" ]]; then
@@ -60,10 +71,22 @@ for f in $REQUIRED_FILES; do
   fi
 done
 
-if [[ -f "LICENSE" ]]; then
-  pass "LICENSE exists"
-else
-  warn "LICENSE is missing (required unless internal/proprietary)"
+# LICENSE is soft-required for non-minimal profiles
+if [[ "$PROFILE" != "minimal" ]]; then
+  if [[ -f "LICENSE" ]]; then
+    pass "LICENSE exists"
+  else
+    warn "LICENSE is missing (required unless internal/proprietary)"
+  fi
+fi
+
+# PLANS.md is required only for agentic profile
+if [[ "$PROFILE" == "agentic" ]]; then
+  if [[ -f "PLANS.md" ]]; then
+    pass "PLANS.md exists"
+  else
+    fail "PLANS.md is missing (required for agentic profile)"
+  fi
 fi
 
 echo ""
@@ -73,7 +96,6 @@ echo ""
 # ============================================================
 echo "${BOLD}--- Naming Conventions ---${RESET}"
 
-# Allowed root-level names that don't follow ALL_CAPS pattern
 ALLOWED_ROOT_NAMES="README.md CHANGELOG.md CONTRIBUTING.md CODEOWNERS SECURITY.md LICENSE"
 
 check_md_naming() {
@@ -81,15 +103,12 @@ check_md_naming() {
   local basename
   basename="$(basename "$file")"
 
-  # Skip allowed exceptions
   for allowed in $ALLOWED_ROOT_NAMES; do
     if [[ "$basename" == "$allowed" ]]; then
       return 0
     fi
   done
 
-  # Check ALL_CAPS_WITH_UNDERSCORES pattern
-  # Must match: uppercase letters, digits, underscores, then .md
   if [[ "$basename" =~ ^[A-Z][A-Z0-9_]*\.md$ ]]; then
     return 0
   else
@@ -98,7 +117,6 @@ check_md_naming() {
   fi
 }
 
-# Check all .md files in the repo (excluding hidden dirs, node_modules, etc.)
 while IFS= read -r -d '' mdfile; do
   check_md_naming "$mdfile"
 done < <(find . -name '*.md' -not -path './.git/*' -not -path './node_modules/*' \
@@ -117,7 +135,6 @@ while IFS= read -r -d '' mdfile; do
   words=$(wc -w < "$mdfile")
   basename="$(basename "$mdfile")"
 
-  # README.md has a 150-line limit
   if [[ "$basename" == "README.md" ]] && [[ "$lines" -gt 150 ]]; then
     fail "$mdfile: $lines lines (max 150 for README)"
   elif [[ "$lines" -gt 400 ]]; then
@@ -141,7 +158,6 @@ echo "${BOLD}--- docs/ Content ---${RESET}"
 if [[ -d "docs" ]]; then
   binary_found=false
   while IFS= read -r -d '' docfile; do
-    # Check if file is binary using file command
     if file --mime-type "$docfile" 2>/dev/null | grep -qvE 'text/|application/json|inode/empty'; then
       fail "Binary file in docs/: $docfile"
       binary_found=true
@@ -149,7 +165,6 @@ if [[ -d "docs" ]]; then
   done < <(find docs -type f -not -name '*.md' -print0 2>/dev/null)
 
   if ! $binary_found; then
-    # Also check for non-.md files that are text but shouldn't be there
     non_md=$(find docs -type f -not -name '*.md' 2>/dev/null | head -5)
     if [[ -n "$non_md" ]]; then
       while IFS= read -r f; do
@@ -159,7 +174,7 @@ if [[ -d "docs" ]]; then
       pass "docs/ contains only .md files"
     fi
   fi
-else
+elif [[ "$PROFILE" != "minimal" ]]; then
   warn "docs/ directory does not exist"
 fi
 
@@ -179,7 +194,6 @@ check_index_refs() {
   fi
 
   if [[ ! -f "$index_file" ]]; then
-    # Only fail if there are files that need indexing
     local count
     count=$(find "docs/$subdir" -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
     if [[ "$count" -gt 0 ]]; then
@@ -195,32 +209,33 @@ check_index_refs() {
     local basename
     basename="$(basename "$docfile")"
     if echo "$index_content" | grep -qF "$basename"; then
-      :  # referenced
+      :
     else
       fail "$docfile not referenced in $index_file"
     fi
   done < <(find "docs/$subdir" -name '*.md' -print0 2>/dev/null)
 }
 
-check_index_refs "design"   "DESIGN.md"
-check_index_refs "research" "RESEARCH.md"
-check_index_refs "backlog"  "BACKLOG.md"
-check_index_refs "plans"    "PLANS.md"
+if [[ "$PROFILE" != "minimal" ]]; then
+  check_index_refs "design"   "DESIGN.md"
+  check_index_refs "research" "RESEARCH.md"
+  check_index_refs "backlog"  "BACKLOG.md"
+  check_index_refs "plans"    "PLANS.md"
 
-# Check if any docs exist but have no parent overview
-for subdir in design research backlog plans; do
-  if [[ -d "docs/$subdir" ]]; then
-    count=$(find "docs/$subdir" -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
-    if [[ "$count" -gt 0 ]]; then
-      case "$subdir" in
-        design)   [[ -f "DESIGN.md" ]]   && pass "DESIGN.md indexes docs/design/"   || : ;;
-        research) [[ -f "RESEARCH.md" ]]  && pass "RESEARCH.md indexes docs/research/" || : ;;
-        backlog)  [[ -f "BACKLOG.md" ]]   && pass "BACKLOG.md indexes docs/backlog/"  || : ;;
-        plans)    [[ -f "PLANS.md" ]]     && pass "PLANS.md indexes docs/plans/"     || : ;;
-      esac
+  for subdir in design research backlog plans; do
+    if [[ -d "docs/$subdir" ]]; then
+      count=$(find "docs/$subdir" -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
+      if [[ "$count" -gt 0 ]]; then
+        case "$subdir" in
+          design)   [[ -f "DESIGN.md" ]]   && pass "DESIGN.md indexes docs/design/"   || : ;;
+          research) [[ -f "RESEARCH.md" ]]  && pass "RESEARCH.md indexes docs/research/" || : ;;
+          backlog)  [[ -f "BACKLOG.md" ]]   && pass "BACKLOG.md indexes docs/backlog/"  || : ;;
+          plans)    [[ -f "PLANS.md" ]]     && pass "PLANS.md indexes docs/plans/"     || : ;;
+        esac
+      fi
     fi
-  fi
-done
+  done
+fi
 
 echo ""
 

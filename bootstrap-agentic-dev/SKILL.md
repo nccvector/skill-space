@@ -333,26 +333,13 @@ If a CI file exceeds 200 lines, factor into reusable workflow files.
 
 When bootstrapping a repo for a user:
 
-1. **Ask** about stack, project type, and agents in use (if not clear from context)
-2. **Generate** the directory tree as a fenced code block
-3. **Generate** the content of key files:
-   - `CLAUDE.md` (two lines, always)
-   - `AGENTS.md` (from `references/AGENTS_TEMPLATE.md`, fill in Agent Roles)
-   - `DESIGN.md`, `RESEARCH.md`, and `BACKLOG.md` stubs
-   - `PLANS.md` stub only if the repo will actively use `docs/plans/`
-   - `LICENSE` unless the repo is internal/proprietary
-   - `CHANGELOG.md` stub
-   - `.gitignore` and stack-specific config files
-4. **Note** which conditional files apply and why:
-   - `.env.example` only if the project uses environment variables
-   - `Makefile` or `justfile` if there are 2+ common commands
-   - `docker-compose.yml` if local multi-service orchestration is needed
-   - `CONTRIBUTING.md`, `CODEOWNERS`, and `SECURITY.md` when they fit the repo
-   - `PLANS.md` only if the repo wants persistent plan indexes and execution logs
+1. **Ask** about stack, project type, agents, and maturity (→ profile choice)
+2. **Run** `bootstrap_repo.sh` with the appropriate `--profile` and `--stack`
+3. **Review** the generated structure with the user
+4. **Note** which conditional files apply (.env.example, Makefile, CONTRIBUTING.md, etc.)
 5. **Offer** to generate specific design artifact templates on request
 
 Lead with structure. Offer to go deeper on any section.
-Don't dump everything at once if the project is simple.
 
 ---
 
@@ -368,24 +355,34 @@ Don't dump everything at once if the project is simple.
   note, backlog item, and plan files. Load when the user asks for a template,
   when generating design artifacts, or when generating backlog/plan files.
 
+## Profiles
+
+Three profiles control how much structure a repo gets:
+
+| Profile | What's created | Use case |
+|---------|---------------|----------|
+| `minimal` | README, AGENTS, CLAUDE, .gitignore, CHANGELOG, check_docs.sh | Weekend scripts, tiny projects |
+| `standard` | minimal + DESIGN, RESEARCH, BACKLOG, LICENSE, docs/, all scripts | Default for most projects |
+| `agentic` | standard + PLANS, docs/plans/ | Multi-agent projects with persistent plan files |
+
+Default: `standard`. Use `--profile` flag or `--plans` shorthand for agentic.
+
+## Config: `bootstrap.env`
+
+Created by `bootstrap_repo.sh`. Passive defaults — scripts read it but
+never mutate the repo. `check_docs.sh` reads `PROFILE` to determine
+which files are required.
+
 ## Scripts
 
-Self-contained shell scripts for automation. Copied into bootstrapped repos.
+All scripts source `scripts/lib.sh` (shared metadata extraction,
+normalization, template rendering). Copied into repos by `bootstrap_repo.sh`.
 
-- `scripts/check_docs.sh` — Policy linter. Enforces naming conventions,
-  line/word limits, required files, and index references. Use `--ci` for
-  non-zero exit on violations. Works as a pre-commit hook.
-
-- `scripts/bootstrap_doc.sh` — Artifact generator. Creates a doc from
-  template and updates the parent index atomically.
-  Usage: `./scripts/bootstrap_doc.sh <type> <title> [--agent <name>]`
-  Types: `rfc`, `adr`, `spec`, `research`, `backlog`, `plan`.
-
-- `scripts/update_indexes.sh` — Index rebuilder. Regenerates root overview
-  files (DESIGN.md, RESEARCH.md, BACKLOG.md, PLANS.md) from actual files
-  in `docs/`. Usage: `./scripts/update_indexes.sh [--dry-run] [design|...]`
-
-- `scripts/bootstrap_repo.sh` — One-shot scaffolding. Creates a full repo
-  skeleton with all required files, stack-specific config, and utility scripts.
-  Usage: `./scripts/bootstrap_repo.sh --name <project> --stack <stack>`
-  Stacks: `python`, `rust`, `node`, `cpp`, `ros2`, `embedded`, `none`.
+| Script | Purpose |
+|--------|---------|
+| `lib.sh` | Shared library: `extract_field`, `extract_title`, `normalize_title`, `extract_template`, `read_bootstrap_env` |
+| `check_docs.sh` | Policy linter. Profile-aware. `--ci` for pre-commit hooks |
+| `bootstrap_doc.sh` | Artifact generator + index update. Reads canonical templates from `references/` or baked fallbacks |
+| `update_indexes.sh` | Rebuilds DESIGN/RESEARCH/BACKLOG/PLANS.md from `docs/`. `--dry-run` support |
+| `bootstrap_repo.sh` | One-shot scaffolding. `--profile minimal|standard|agentic`, `--stack`, `--agents` |
+| `smoke_test.sh` | End-to-end tests. All profiles × representative stacks |

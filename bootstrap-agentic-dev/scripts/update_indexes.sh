@@ -7,6 +7,10 @@
 
 set -euo pipefail
 
+# Source shared library
+LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
+source "$LIB"
+
 DRY_RUN=false
 TARGETS=""
 
@@ -24,40 +28,6 @@ fi
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$REPO_ROOT"
-
-# --- Extract a field value from a markdown metadata table ---
-# Reads the first table in a file and extracts the value for a given field name.
-extract_field() {
-  local file="$1"
-  local field="$2"
-  awk -F'|' -v field="$field" '
-    /^\|/ && !/^\|--/ {
-      gsub(/^[ \t]+|[ \t]+$/, "", $2)
-      gsub(/^[ \t]+|[ \t]+$/, "", $3)
-      if (tolower($2) == tolower(field)) { print $3; exit }
-    }
-  ' "$file" | sed 's/^[ \t]*//;s/[ \t]*$//'
-}
-
-# --- Extract title from first H1 heading ---
-extract_title() {
-  local file="$1"
-  head -5 "$file" | grep -m1 '^# ' | sed 's/^# //' | sed 's/^[A-Z]*-[0-9]*: //' | sed 's/^Backlog: //' | sed 's/^Research: //' | sed 's/^Plan: //'
-}
-
-# --- Write or print output ---
-write_output() {
-  local target_file="$1"
-  local content="$2"
-  if $DRY_RUN; then
-    echo "=== Would write to: $target_file ==="
-    echo "$content"
-    echo ""
-  else
-    echo "$content" > "$target_file"
-    echo "Updated: $target_file"
-  fi
-}
 
 # ============================================================
 # Rebuild DESIGN.md
@@ -123,7 +93,7 @@ rebuild_design() {
 "|------|-------|--------|")"
   content="${content}"$'\n'"$(printf "%b" "$archived_rows" | sed '/^$/d')"
 
-  write_output "DESIGN.md" "$content"
+  write_output "DESIGN.md" "$content" "$DRY_RUN"
 }
 
 # ============================================================
@@ -175,7 +145,7 @@ rebuild_research() {
 "- IMPLEMENTED — findings were acted on" \
 "- ARCHIVED — no longer relevant")"
 
-  write_output "RESEARCH.md" "$content"
+  write_output "RESEARCH.md" "$content" "$DRY_RUN"
 }
 
 # ============================================================
@@ -188,12 +158,8 @@ rebuild_backlog() {
     return
   fi
 
-  local active_items=""
-  local archived_rows=""
-  local count=0
-
-  # Sort: IN_PROGRESS first, then PLANNED, then IDEA
   local in_progress="" planned="" ideas="" done_items=""
+  local archived_rows=""
 
   while IFS= read -r -d '' f; do
     local basename
@@ -215,7 +181,6 @@ rebuild_backlog() {
     esac
   done < <(find "$dir" -name '*.md' -print0 2>/dev/null | sort -z)
 
-  # Build numbered list
   local numbered=""
   local num=0
   for group in "$in_progress" "$planned" "$ideas" "$done_items"; do
@@ -253,7 +218,7 @@ rebuild_backlog() {
 "|------|---------|--------|")"
   content="${content}"$'\n'"$(printf "%b" "$archived_rows" | sed '/^$/d')"
 
-  write_output "BACKLOG.md" "$content"
+  write_output "BACKLOG.md" "$content" "$DRY_RUN"
 }
 
 # ============================================================
@@ -308,7 +273,7 @@ rebuild_plans() {
 "|------|------|--------------|--------------|")"
   content="${content}"$'\n'"$(printf "%b" "$completed_rows" | sed '/^$/d')"
 
-  write_output "PLANS.md" "$content"
+  write_output "PLANS.md" "$content" "$DRY_RUN"
 }
 
 # --- Run selected rebuilds ---

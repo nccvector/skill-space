@@ -1,25 +1,35 @@
 #!/usr/bin/env bash
 # bootstrap_repo.sh — Create a full repo skeleton with all required files.
 # Usage: ./scripts/bootstrap_repo.sh --name <project> --stack <stack> [options]
-#   --name    Project name (required)
-#   --stack   python, rust, node, cpp, ros2, embedded, none (required)
-#   --agents  Comma-separated agent names (default: claude)
-#   --license mit, apache-2.0, none (default: mit)
-#   --plans   Include docs/plans/ and PLANS.md (optional, off by default)
-#   --dir     Target directory (default: ./<name>)
+#   --name      Project name (required)
+#   --stack     python, rust, node, cpp, ros2, embedded, none (required)
+#   --profile   minimal, standard, agentic (default: standard)
+#   --agents    Comma-separated agent names (default: claude)
+#   --license   mit, apache-2.0, none (default: mit)
+#   --plans     Shorthand for --profile agentic
+#   --dir       Target directory (default: ./<name>)
 
 set -euo pipefail
 
+# Resolve script/skill directory BEFORE anything else
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REFS_DIR="$SCRIPT_DIR/../references"
+
+# Source shared library
+LIB="$SCRIPT_DIR/lib.sh"
+source "$LIB"
+
 # --- Parse arguments ---
-NAME="" STACK="" AGENTS="claude" LICENSE_TYPE="mit" TARGET_DIR="" WITH_PLANS=false
+NAME="" STACK="" PROFILE="standard" AGENTS="claude" LICENSE_TYPE="mit" TARGET_DIR=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --name)    NAME="$2"; shift 2 ;;
     --stack)   STACK="$2"; shift 2 ;;
+    --profile) PROFILE="$2"; shift 2 ;;
     --agents)  AGENTS="$2"; shift 2 ;;
     --license) LICENSE_TYPE="$2"; shift 2 ;;
-    --plans)   WITH_PLANS=true; shift ;;
+    --plans)   PROFILE="agentic"; shift ;;
     --dir)     TARGET_DIR="$2"; shift 2 ;;
     *) echo "Unknown option: $1"; exit 1 ;;
   esac
@@ -27,7 +37,7 @@ done
 
 if [[ -z "$NAME" ]]; then
   echo "Error: --name is required."
-  echo "Usage: $0 --name <project> --stack <stack> [--agents <a,b>] [--license mit|apache-2.0|none] [--dir <path>]"
+  echo "Usage: $0 --name <project> --stack <stack> [--profile minimal|standard|agentic] [--agents <a,b>] [--license mit|apache-2.0|none]"
   exit 1
 fi
 
@@ -35,15 +45,6 @@ if [[ -z "$STACK" ]]; then
   echo "Error: --stack is required. Options: python, rust, node, cpp, ros2, embedded, none"
   exit 1
 fi
-
-[[ -z "$TARGET_DIR" ]] && TARGET_DIR="./$NAME"
-TODAY="$(date +%Y-%m-%d)"
-YEAR="$(date +%Y)"
-AUTHOR="$(git config user.name 2>/dev/null || echo "Unknown")"
-
-# Resolve script directory BEFORE cd-ing into the target
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TEMPLATE_FILE="$SCRIPT_DIR/../references/AGENTS_TEMPLATE.md"
 
 # --- Validate ---
 case "$STACK" in
@@ -56,6 +57,29 @@ case "$LICENSE_TYPE" in
   *) echo "Error: unknown license '$LICENSE_TYPE'. Use: mit, apache-2.0, none"; exit 1 ;;
 esac
 
+case "$PROFILE" in
+  minimal|standard|agentic) ;;
+  *) echo "Error: unknown profile '$PROFILE'. Use: minimal, standard, agentic"; exit 1 ;;
+esac
+
+[[ -z "$TARGET_DIR" ]] && TARGET_DIR="./$NAME"
+TODAY="$(date +%Y-%m-%d)"
+YEAR="$(date +%Y)"
+AUTHOR="$(git config user.name 2>/dev/null || echo "Unknown")"
+
+# --- Reference files ---
+TEMPLATES_FILE="$REFS_DIR/TEMPLATES.md"
+ARTIFACTS_FILE="$REFS_DIR/TEMPLATES_ARTIFACTS.md"
+AGENTS_TEMPLATE="$REFS_DIR/AGENTS_TEMPLATE.md"
+
+for ref in "$TEMPLATES_FILE" "$ARTIFACTS_FILE" "$AGENTS_TEMPLATE"; do
+  if [[ ! -f "$ref" ]]; then
+    echo "Error: Cannot find $ref"
+    echo "bootstrap_repo.sh must be run from the skill directory."
+    exit 1
+  fi
+done
+
 if [[ -d "$TARGET_DIR" ]] && [[ "$(ls -A "$TARGET_DIR" 2>/dev/null)" ]]; then
   echo "Error: $TARGET_DIR already exists and is not empty."
   exit 1
@@ -63,226 +87,40 @@ fi
 
 echo "Bootstrapping project: $NAME"
 echo "  Stack:   $STACK"
+echo "  Profile: $PROFILE"
 echo "  Agents:  $AGENTS"
 echo "  License: $LICENSE_TYPE"
-echo "  Plans:   $WITH_PLANS"
 echo "  Dir:     $TARGET_DIR"
 echo ""
 
-# --- Create directory structure ---
-mkdir -p "$TARGET_DIR"/{src,tests,docs/{design,research,backlog},scripts,config}
-if $WITH_PLANS; then
+# ============================================================
+# Create directory structure (profile-dependent)
+# ============================================================
+mkdir -p "$TARGET_DIR"/{src,tests,scripts}
+
+if [[ "$PROFILE" != "minimal" ]]; then
+  mkdir -p "$TARGET_DIR"/{docs/{design,research,backlog},config}
+fi
+
+if [[ "$PROFILE" == "agentic" ]]; then
   mkdir -p "$TARGET_DIR/docs/plans"
 fi
 
 cd "$TARGET_DIR"
 
 # ============================================================
-# Root-level files
+# Root-level files (all profiles)
 # ============================================================
 
-# --- README.md ---
-cat > README.md << EOF
-# ${NAME}
-
-One sentence. What this is and why it exists.
-
-## Quick Start
-
-\`\`\`bash
-# How to build
-make build
-
-# How to run
-make run
-\`\`\`
-
-## Requirements
-
-- Dependency A >= version X
-
-## Documentation
-
-- [Design overview](DESIGN.md)
-- [Research overview](RESEARCH.md)
-- [Backlog](BACKLOG.md)
-- [Agent rules](AGENTS.md)
-EOF
+# --- README.md (needs variable substitution) ---
+extract_template "$TEMPLATES_FILE" "README Template" | \
+  sed "s/# Project Name/# ${NAME}/" > README.md
 
 # --- CLAUDE.md ---
-cat > CLAUDE.md << 'EOF'
-# CLAUDE.md
-
-See [AGENTS.md](AGENTS.md) for all agent rules, roles, and documentation conventions.
-EOF
-
-# --- DESIGN.md ---
-cat > DESIGN.md << 'EOF'
-# DESIGN.md
-
-Overview of all design artifacts in `docs/design/`.
-Agents must keep this file in sync with the current implementation.
-
-## Active Design Artifacts
-
-| File | Title | Status | Last Updated |
-|------|-------|--------|--------------|
-| _(none)_ | — | — | — |
-
-## Status Reference
-
-- DRAFT — being written, not yet reviewed
-- UNDER_REVIEW — open for feedback
-- ACCEPTED — approved, not yet implemented
-- IMPLEMENTED — accepted and in production
-- ARCHIVED — superseded or abandoned
-- REJECTED — explicitly decided against
-
-## Archived Artifacts
-
-| File | Title | Reason |
-|------|-------|--------|
-| _(none)_ | — | — |
-EOF
-
-# --- RESEARCH.md ---
-cat > RESEARCH.md << 'EOF'
-# RESEARCH.md
-
-Overview of all research in `docs/research/`.
-
-## Active Research
-
-| File | Topic | Status | Last Updated |
-|------|-------|--------|--------------|
-| _(none)_ | — | — | — |
-
-## Status Reference
-
-- ACTIVE — ongoing research
-- EXPERIMENT — live experiment, results pending
-- IDEA — not yet formally pursued
-- COMPLETE — findings documented
-- IMPLEMENTED — findings were acted on
-- ARCHIVED — no longer relevant
-EOF
-
-# --- BACKLOG.md ---
-cat > BACKLOG.md << 'EOF'
-# BACKLOG.md
-
-Overview of all backlog items in `docs/backlog/`.
-
-## Priority Order
-
-_(no items yet)_
-
-## Status Reference
-
-- PLANNED — prioritized, will be worked on
-- IDEA — not yet prioritized
-- IN_PROGRESS — currently being worked on
-- DONE — completed
-- ARCHIVED — decided against or no longer relevant
-
-## Archived Items
-
-| File | Summary | Reason |
-|------|---------|--------|
-| _(none)_ | — | — |
-EOF
-
-# --- PLANS.md (only if --plans) ---
-if $WITH_PLANS; then
-  cat > PLANS.md << 'EOF'
-# PLANS.md
-
-Overview of all plan files in `docs/plans/`.
-
-## Active Plans
-
-| File | Goal | Status | Last Updated |
-|------|------|--------|--------------|
-| _(none)_ | — | — | — |
-
-## Completed Plans
-
-| File | Goal | Final Status | Last Updated |
-|------|------|--------------|--------------|
-| _(none)_ | — | — | — |
-EOF
-fi
+extract_template "$TEMPLATES_FILE" "CLAUDE.md Template" > CLAUDE.md
 
 # --- CHANGELOG.md ---
-cat > CHANGELOG.md << 'EOF'
-# CHANGELOG.md
-
-All notable changes to this project are documented here.
-
-## Unreleased
-
-### Added
-
-- _(none yet)_
-
-### Changed
-
-- _(none yet)_
-
-### Fixed
-
-- _(none yet)_
-EOF
-
-# --- AGENTS.md (generated from canonical template) ---
-if [[ ! -f "$TEMPLATE_FILE" ]]; then
-  echo "Error: Cannot find AGENTS_TEMPLATE.md at $TEMPLATE_FILE"
-  echo "bootstrap_repo.sh must be run from the skill directory."
-  exit 1
-fi
-
-# Build agent roles table rows
-build_agent_roles() {
-  local agents_csv="$1"
-  IFS=',' read -ra agent_list <<< "$agents_csv"
-  local first=true
-  for agent in "${agent_list[@]}"; do
-    agent="$(echo "$agent" | sed 's/^[ \t]*//;s/[ \t]*$//')"
-    local cap_agent
-    cap_agent="$(echo "${agent:0:1}" | tr '[:lower:]' '[:upper:]')${agent:1}"
-    if $first; then
-      echo "| ${cap_agent} | Engineer, Debugger | Default implementer |"
-      first=false
-    else
-      echo "| ${cap_agent} | Researcher, Reviewer | — |"
-    fi
-  done
-}
-
-AGENT_ROWS_FILE="$(mktemp)"
-build_agent_roles "$AGENTS" > "$AGENT_ROWS_FILE"
-
-# Read template, replace the placeholder roles table, and conditionally
-# strip PLANS.md references if --plans was not passed.
-awk '
-  /^\| Claude \|/ { next }
-  /^\| Codex \|/ { next }
-  /^\| _\(add more\)_ \|/ {
-    while ((getline line < "'"$AGENT_ROWS_FILE"'") > 0) print line
-    next
-  }
-  { print }
-' "$TEMPLATE_FILE" > AGENTS.md
-rm -f "$AGENT_ROWS_FILE"
-
-# If plans are disabled, strip PLANS.md and docs/plans/ references
-if ! $WITH_PLANS; then
-  # Remove lines that reference PLANS.md or docs/plans/
-  sed -i '' \
-    -e '/^- `PLANS\.md`/d' \
-    -e '/^- `docs\/plans\/`/d' \
-    AGENTS.md
-fi
+extract_template "$TEMPLATES_FILE" "CHANGELOG.md Template" > CHANGELOG.md
 
 # --- .gitignore ---
 cat > .gitignore << 'EOF'
@@ -310,7 +148,118 @@ out/
 # Dependencies (stack-specific entries added below)
 EOF
 
-# --- Stack-specific files ---
+# ============================================================
+# Standard + Agentic profile files
+# ============================================================
+if [[ "$PROFILE" != "minimal" ]]; then
+  extract_template "$TEMPLATES_FILE" "DESIGN.md Template" > DESIGN.md
+  extract_template "$TEMPLATES_FILE" "RESEARCH.md Template" > RESEARCH.md
+  extract_template "$TEMPLATES_FILE" "BACKLOG.md Template" > BACKLOG.md
+
+  if [[ "$LICENSE_TYPE" != "none" ]]; then
+    case "$LICENSE_TYPE" in
+      mit)
+        cat > LICENSE << LICEOF
+MIT License
+
+Copyright (c) ${YEAR} ${AUTHOR}
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+LICEOF
+        ;;
+      apache-2.0)
+        cat > LICENSE << LICEOF
+                                 Apache License
+                           Version 2.0, January 2004
+                        http://www.apache.org/licenses/
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+
+   Copyright ${YEAR} ${AUTHOR}
+LICEOF
+        ;;
+    esac
+  fi
+fi
+
+# ============================================================
+# Agentic profile: PLANS.md
+# ============================================================
+if [[ "$PROFILE" == "agentic" ]]; then
+  extract_template "$TEMPLATES_FILE" "PLANS.md Template" > PLANS.md
+fi
+
+# ============================================================
+# AGENTS.md (from canonical template)
+# ============================================================
+build_agent_roles() {
+  local agents_csv="$1"
+  IFS=',' read -ra agent_list <<< "$agents_csv"
+  local first=true
+  for agent in "${agent_list[@]}"; do
+    agent="$(echo "$agent" | sed 's/^[ \t]*//;s/[ \t]*$//')"
+    local cap_agent
+    cap_agent="$(echo "${agent:0:1}" | tr '[:lower:]' '[:upper:]')${agent:1}"
+    if $first; then
+      echo "| ${cap_agent} | Engineer, Debugger | Default implementer |"
+      first=false
+    else
+      echo "| ${cap_agent} | Researcher, Reviewer | — |"
+    fi
+  done
+}
+
+AGENT_ROWS_FILE="$(mktemp)"
+build_agent_roles "$AGENTS" > "$AGENT_ROWS_FILE"
+
+awk '
+  /^\| Claude \|/ { next }
+  /^\| Codex \|/ { next }
+  /^\| _\(add more\)_ \|/ {
+    while ((getline line < "'"$AGENT_ROWS_FILE"'") > 0) print line
+    next
+  }
+  { print }
+' "$AGENTS_TEMPLATE" > AGENTS.md
+rm -f "$AGENT_ROWS_FILE"
+
+# Strip plan references for non-agentic profiles
+if [[ "$PROFILE" != "agentic" ]]; then
+  sed -i '' \
+    -e '/^- `PLANS\.md`/d' \
+    -e '/^- `docs\/plans\/`/d' \
+    AGENTS.md
+fi
+
+# ============================================================
+# Stack-specific files
+# ============================================================
 case "$STACK" in
   python)
     cat >> .gitignore << 'EOF'
@@ -352,7 +301,6 @@ PYEOF
 
 # Rust
 target/
-Cargo.lock
 EOF
     cat > Cargo.toml << RSEOF
 [package]
@@ -362,8 +310,6 @@ edition = "2021"
 
 [dependencies]
 RSEOF
-    # For binaries, commit Cargo.lock
-    sed -i '' '/Cargo.lock/d' .gitignore 2>/dev/null || true
     ;;
 
   node)
@@ -481,70 +427,50 @@ PIOEOF
     ;;
 esac
 
-# --- LICENSE ---
-case "$LICENSE_TYPE" in
-  mit)
-    cat > LICENSE << LICEOF
-MIT License
-
-Copyright (c) ${YEAR} ${AUTHOR}
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-LICEOF
-    ;;
-  apache-2.0)
-    cat > LICENSE << LICEOF
-                                 Apache License
-                           Version 2.0, January 2004
-                        http://www.apache.org/licenses/
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-   Copyright ${YEAR} ${AUTHOR}
-LICEOF
-    ;;
-  none)
-    # No license file for proprietary repos
-    ;;
-esac
+# ============================================================
+# bootstrap.env
+# ============================================================
+cat > bootstrap.env << ENVEOF
+# bootstrap.env — project bootstrap defaults (passive, read-only by scripts)
+PROJECT_NAME=${NAME}
+STACK=${STACK}
+PROFILE=${PROFILE}
+AGENTS=${AGENTS}
+LICENSE=${LICENSE_TYPE}
+ENVEOF
 
 # ============================================================
 # Copy utility scripts into the new repo
 # ============================================================
 
-# --- Copy utility scripts (self-contained copies) ---
-for script in check_docs.sh bootstrap_doc.sh update_indexes.sh; do
-  if [[ -f "$SCRIPT_DIR/$script" ]]; then
-    cp "$SCRIPT_DIR/$script" "scripts/$script"
-    chmod +x "scripts/$script"
+# lib.sh is always copied (all profiles need it)
+cp "$SCRIPT_DIR/lib.sh" "scripts/lib.sh"
+chmod +x "scripts/lib.sh"
+
+# check_docs.sh is always copied (all profiles)
+if [[ -f "$SCRIPT_DIR/check_docs.sh" ]]; then
+  cp "$SCRIPT_DIR/check_docs.sh" "scripts/check_docs.sh"
+  chmod +x "scripts/check_docs.sh"
+fi
+
+# Standard and agentic profiles get doc generators and index rebuilders
+if [[ "$PROFILE" != "minimal" ]]; then
+  # Copy bootstrap_doc.sh and bake templates into it
+  if [[ -f "$SCRIPT_DIR/bootstrap_doc.sh" ]]; then
+    cp "$SCRIPT_DIR/bootstrap_doc.sh" "scripts/bootstrap_doc.sh"
+    chmod +x "scripts/bootstrap_doc.sh"
+
+    # Bake: replace the extract_template path check so HAS_REFS=false in copied version
+    # This forces the copied script to use the fallback heredocs
+    sed -i '' 's/^\[.*HAS_REFS=true$/HAS_REFS=false  # baked copy — uses fallback heredocs/' \
+      "scripts/bootstrap_doc.sh" 2>/dev/null || true
   fi
-done
+
+  if [[ -f "$SCRIPT_DIR/update_indexes.sh" ]]; then
+    cp "$SCRIPT_DIR/update_indexes.sh" "scripts/update_indexes.sh"
+    chmod +x "scripts/update_indexes.sh"
+  fi
+fi
 
 # ============================================================
 # Git init and initial commit
@@ -553,6 +479,7 @@ git init -q
 git add -A
 git commit -q -m "Initial repo scaffold
 
+Profile: ${PROFILE}
 Stack: ${STACK}
 Agents: ${AGENTS}
 License: ${LICENSE_TYPE}
@@ -568,4 +495,6 @@ echo ""
 echo "Next steps:"
 echo "  cd $TARGET_DIR"
 echo "  ./scripts/check_docs.sh          # verify doc conventions"
-echo "  ./scripts/bootstrap_doc.sh rfc \"my first design\"  # create an RFC"
+if [[ "$PROFILE" != "minimal" ]]; then
+  echo "  ./scripts/bootstrap_doc.sh rfc \"my first design\"  # create an RFC"
+fi
