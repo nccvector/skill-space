@@ -427,6 +427,21 @@ What problem does it solve?
 High-level description of how this could be implemented.
 This is not a spec — it's a starting point.
 
+## Constraints
+
+- Constraint or non-goal
+- Compatibility or scope boundary
+
+## Definition Of Done
+
+- Observable outcome that must be true
+- Required verification or artifact update
+
+## Reporting Expectations
+
+- What the implementing agent should report back
+- Any follow-up risk, limitation, or deferred work to call out
+
 ## Open Questions
 
 - [ ] Question that needs resolution before starting
@@ -461,6 +476,19 @@ File: `docs/plans/PLAN_<AGENT>_<SUMMARY>.md`
 1. Step one
 2. Step two
 3. Step three
+
+**Constraints:**
+- Constraint or non-goal 1
+- Constraint or non-goal 2
+
+**Definition Of Done:**
+- Observable outcome 1
+- Observable outcome 2
+
+**Reporting Expectations:**
+- Report the key outcome
+- Report verification performed
+- Call out follow-up work or remaining risks
 
 **Dependencies / Risks:**
 - Risk or dependency 1

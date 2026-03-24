@@ -6,6 +6,24 @@ Rules here are enforced, not suggested.
 
 ---
 
+## Project Documents
+
+List the canonical project documents here and keep the descriptions current.
+This section should help a new agent understand where the important context lives.
+
+- `README.md` — repo overview, build/run entry point, and quick start
+- `DESIGN.md` — living implementation and architecture contract
+- `RESEARCH.md` — index of research notes, experiments, and findings
+- `BACKLOG.md` — prioritized queue of planned and in-progress work
+- `docs/design/` — deeper RFCs, ADRs, specs, and design support docs
+- `docs/research/` — detailed research artifacts, benchmarks, and feasibility notes
+- `docs/backlog/` — individual backlog item files
+- `docs/plans/` — approved plans and execution logs for significant tasks
+
+Add or remove entries to reflect the actual repo.
+
+---
+
 ## Documentation Rules
 
 ### Format
@@ -177,6 +195,9 @@ A plan file has exactly two sections:
 **Section 1 — The Plan** (written before approval):
 - Goal: one sentence describing what this plan achieves
 - Steps: numbered list of concrete actions
+- Constraints: requirements, scope boundaries, and things this task must not break
+- Definition of done: the conditions that must be true before the task is complete
+- Reporting expectations: what outcomes, verification, and follow-up notes the agent must report back
 - Dependencies or risks: anything that could block execution
 
 **Section 2 — Progress** (appended after execution):
