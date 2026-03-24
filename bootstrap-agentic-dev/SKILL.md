@@ -76,7 +76,6 @@ project-root/
 ├── CHANGELOG.md
 ├── LICENSE
 ├── .gitignore
-├── .env.example
 │
 ├── src/                  # All production source code
 ├── tests/                # Tests (colocated or centralized — pick one)
@@ -237,7 +236,8 @@ Every document must be reachable from at least one root-level file.
 
 **`DESIGN.md`** — Overview of all content in `docs/design/`.
 Must reflect current implementation state.
-Contains: status of each design artifact (Draft, Accepted, Implemented, Archived).
+Contains: status of each design artifact (`DRAFT`, `UNDER_REVIEW`,
+`ACCEPTED`, `IMPLEMENTED`, `ARCHIVED`, `REJECTED`).
 Agents must update this whenever implementation changes.
 
 **`RESEARCH.md`** — Overview of all content in `docs/research/`.
@@ -344,8 +344,14 @@ When bootstrapping a repo for a user:
    - `AGENTS.md` (from `references/AGENTS_TEMPLATE.md`, fill in Agent Roles)
    - `DESIGN.md` and `RESEARCH.md` stubs
    - `BACKLOG.md` stub
+   - `LICENSE` unless the repo is internal/proprietary
+   - `CHANGELOG.md` stub
    - `.gitignore` and stack-specific config files
-4. **Note** which optional files apply and why
+4. **Note** which conditional files apply and why:
+   - `.env.example` only if the project uses environment variables
+   - `Makefile` or `justfile` if there are 2+ common commands
+   - `docker-compose.yml` if local multi-service orchestration is needed
+   - `CONTRIBUTING.md`, `CODEOWNERS`, and `SECURITY.md` when they fit the repo
 5. **Offer** to generate specific design artifact templates on request
 
 Lead with structure. Offer to go deeper on any section.

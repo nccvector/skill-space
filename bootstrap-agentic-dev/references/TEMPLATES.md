@@ -2,7 +2,7 @@
 
 Ready-to-copy templates for every document type in the repo-bootstrap system.
 All filenames follow `ALL_CAPS_WITH_UNDERSCORES` convention.
-All templates respect the 400-line and 20-words-per-line limits.
+All templates respect the documented 400-line and 8000-word limits.
 
 ---
 
@@ -150,6 +150,45 @@ Overview of all backlog items in `docs/backlog/`.
 |------|---------|--------|
 | _(none)_ | — | — |
 ```
+
+---
+
+## CHANGELOG.md Template
+
+File: `CHANGELOG.md`
+
+```markdown
+# CHANGELOG.md
+
+All notable changes to this project are documented here.
+
+## Unreleased
+
+### Added
+
+- _(none yet)_
+
+### Changed
+
+- _(none yet)_
+
+### Fixed
+
+- _(none yet)_
+```
+
+---
+
+## LICENSE Guidance
+
+File: `LICENSE`
+
+Use a standard license text selected for the project:
+- MIT for simple permissive open source projects
+- Apache-2.0 when an explicit patent grant is desired
+- Proprietary/internal repos may omit `LICENSE`
+
+Do not invent custom license wording unless the user explicitly asks for it.
 
 ---
 
@@ -432,11 +471,4 @@ File: `docs/plans/PLAN_<AGENT>_<SUMMARY>.md`
 
 _(This section is appended by the agent after execution.)_
 _(Do not edit earlier entries — append only.)_
-
-### Status Report — YYYY-MM-DD
-
-- DONE: Step one
-- DONE: Step two
-- IN_PROGRESS: Step three
-- TODO: Step four (if applicable)
 ```
