@@ -27,7 +27,18 @@ Ask (or infer from context) before producing a structure:
 
 Don't generate a monorepo scaffold for someone building a weekend script.
 Match the structure to the reality.
+---
 
+## Document Roles
+These documents do different jobs. Do not treat them as interchangeable.
+- **`RFC`** — Proposes a significant change still open for discussion.
+- **`ADR`** — Records a decision that has already been made.
+- **`BACKLOG`** — Tracks candidate, planned, and in-progress work.
+- **`PLAN`** — Describes execution for a specific accepted task.
+  Use it for multi-step or risky work, explicit plan mode, or when an
+  execution log is valuable. A plan is optional, not universal.
+Rule of thumb: `RFC` before a major decision, `ADR` after a major decision,
+`PLAN` before significant execution work, `BACKLOG` for queued work over time.
 ---
 
 ## Step 2: Root-Level Files
@@ -44,7 +55,6 @@ Every repo, no exceptions:
 | `DESIGN.md` | Overview of `design/` dir | Kept in sync with current implementation. |
 | `RESEARCH.md` | Overview of `research/` dir | Summary of status of all research items. |
 | `BACKLOG.md` | Overview of `backlog/` dir | Priorities and statuses. Links to `backlog/`. |
-| `PLANS.md` | Overview of `plans/` dir | Index of significant task plans and execution status. |
 | `.gitignore` | Exclude build artifacts and secrets | Never ignore source files. Never commit secrets. |
 | `LICENSE` | Legal clarity | Omit only for internal proprietary repos. |
 | `CHANGELOG.md` | Notable changes over time | Even solo projects need this. |
@@ -59,6 +69,7 @@ Every repo, no exceptions:
 | `CONTRIBUTING.md` | More than one human will ever touch this |
 | `CODEOWNERS` | Repo has clear ownership zones by directory |
 | `SECURITY.md` | Public-facing project with vulnerability disclosure |
+| `PLANS.md` | The repo uses `docs/plans/` and wants a root index for plan files |
 
 ---
 
@@ -74,7 +85,6 @@ project-root/
 ├── DESIGN.md             # Overview of docs/design/ dir
 ├── RESEARCH.md           # Overview of docs/research/ dir
 ├── BACKLOG.md            # Overview of docs/backlog/ dir
-├── PLANS.md              # Overview of docs/plans/ dir
 ├── CHANGELOG.md
 ├── LICENSE
 ├── .gitignore
@@ -250,9 +260,10 @@ Contains: status of each research item (`ACTIVE`, `EXPERIMENT`, `IDEA`,
 Contains: priorities and statuses for all backlog items.
 Links to individual files in `docs/backlog/`.
 
-**`PLANS.md`** — Overview of all content in `docs/plans/`.
-Contains: active and completed plan files with current execution status.
-Links to individual files in `docs/plans/`.
+**`PLANS.md`** — Optional overview of all content in `docs/plans/`.
+Create it when the repo actively uses plan files and wants a root index.
+Contains active and completed plan files with current execution status.
+Links to files in `docs/plans/`.
 
 ---
 
@@ -303,15 +314,15 @@ Committing them is encouraged — they are a record of thinking.
 
 ### Plan Files
 
-`PLANS.md` at root — the index:
+Optional: `PLANS.md` at root — the index:
 - Lists active, pending-approval, and completed plan files.
 - Links to individual files in `docs/plans/`.
-
 Location: `docs/plans/PLAN_<AGENT_NAME>_<PLAN_SUMMARY>.md`
-
 When to create:
 - Before starting any significant or multi-step task.
 - When in "plan mode" awaiting user approval.
+- Skip it for small, obvious, low-risk tasks where it adds more ceremony
+  than clarity.
 
 File structure — two sections:
 
@@ -358,7 +369,8 @@ When bootstrapping a repo for a user:
 3. **Generate** the content of key files:
    - `CLAUDE.md` (two lines, always)
    - `AGENTS.md` (from `references/AGENTS_TEMPLATE.md`, fill in Agent Roles)
-   - `DESIGN.md`, `RESEARCH.md`, `BACKLOG.md`, and `PLANS.md` stubs
+   - `DESIGN.md`, `RESEARCH.md`, and `BACKLOG.md` stubs
+   - `PLANS.md` stub only if the repo will actively use `docs/plans/`
    - `LICENSE` unless the repo is internal/proprietary
    - `CHANGELOG.md` stub
    - `.gitignore` and stack-specific config files
@@ -367,6 +379,7 @@ When bootstrapping a repo for a user:
    - `Makefile` or `justfile` if there are 2+ common commands
    - `docker-compose.yml` if local multi-service orchestration is needed
    - `CONTRIBUTING.md`, `CODEOWNERS`, and `SECURITY.md` when they fit the repo
+   - `PLANS.md` only if the repo wants persistent plan indexes and execution logs
 5. **Offer** to generate specific design artifact templates on request
 
 Lead with structure. Offer to go deeper on any section.

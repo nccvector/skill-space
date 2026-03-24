@@ -15,7 +15,7 @@ This section should help a new agent understand where the important context live
 - `DESIGN.md` — living implementation and architecture contract
 - `RESEARCH.md` — index of research notes, experiments, and findings
 - `BACKLOG.md` — prioritized queue of planned and in-progress work
-- `PLANS.md` — index of significant task plans and execution status
+- `PLANS.md` — optional index of significant task plans and execution status
 - `docs/design/` — deeper RFCs, ADRs, specs, and design support docs
 - `docs/research/` — detailed research artifacts, benchmarks, and feasibility notes
 - `docs/backlog/` — individual backlog item files
@@ -73,8 +73,9 @@ If a file exceeds 400 lines or 8000 total words:
 Multiple `.md` files may reference the same `.md` file.
 Referencing forms a **graph**, not a strict tree.
 Wikipedia-style cross-linking is encouraged.
-Every document must be reachable from at least one root-level overview file:
-`DESIGN.md`, `RESEARCH.md`, `BACKLOG.md`, or `PLANS.md`.
+Every document should be reachable from at least one relevant root-level
+overview file. If the repo uses `docs/plans/`, use `PLANS.md` as the root
+overview for plan files.
 
 ### Directory Organization
 
@@ -119,7 +120,10 @@ Possible statuses for research items:
 Contains priorities and statuses for all backlog items.
 Links to individual files in `docs/backlog/`.
 
+Optional root overview file:
+
 **`PLANS.md`** — Overview of all content in `docs/plans/`.
+Create it when the repo actively uses plan files and wants a root index.
 Contains active and completed plan files with their execution status.
 Links to individual files in `docs/plans/`.
 
@@ -162,6 +166,12 @@ Agents must update `CHANGELOG.md` when they complete a user-facing change.
 `BACKLOG.md` references items in `docs/backlog/` by link.
 It may also contain notes on relative priorities and groupings.
 
+### Document Role Reminder
+
+- `BACKLOG.md` is for queued, prioritized, and active work.
+- `BACKLOG.md` is not a substitute for an ADR.
+- `BACKLOG.md` may reference RFCs, ADRs, or plan files when useful.
+
 ### Backlog Item Statuses
 
 | Status | Meaning |
@@ -187,6 +197,7 @@ It may also contain notes on relative priorities and groupings.
 Create a plan file before any significant or multi-step task.
 When operating in "plan mode", write the plan and **wait for user approval**
 before taking any action.
+Do not create plan files for every trivial task by reflex.
 
 ### Plan File Format
 
@@ -217,6 +228,12 @@ A plan file has exactly two sections:
 - Agents MUST append Section 2 after completing the task.
 - Plan files may be deleted when no longer relevant.
 - Committing plan files is encouraged — they are an agent activity log.
+
+### Document Role Reminder
+
+- A `PLAN` is an execution artifact, not a design proposal.
+- Use an `RFC` when the solution still needs discussion.
+- Use an `ADR` when the decision has been made and should be recorded.
 
 ---
 

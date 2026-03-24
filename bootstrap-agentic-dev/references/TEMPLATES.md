@@ -161,6 +161,9 @@ Overview of all backlog items in `docs/backlog/`.
 
 File: `PLANS.md`
 
+Create this file only if the repo actively uses `docs/plans/`
+and wants a root-level index of plan files.
+
 ```markdown
 # PLANS.md
 
