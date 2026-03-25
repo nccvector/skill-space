@@ -11,30 +11,33 @@ The canonical reference for Codex-compatible models is:
 
 Use that page when model naming is unclear or when the CLI does not expose a way to enumerate models.
 Do not guess from unrelated OpenAI model names. `o3` is an example of a model name that may be valid elsewhere but is not listed on the Codex models page.
+Treat local model availability as unclear by default unless you have stronger evidence than help-text examples.
 
 ## Selection Rules
 
 Choose the model in this order:
 
 1. a user-specified model, if one was explicitly requested
-2. the newest clearly supported review-capable model confirmed by the installed CLI or the official Codex models page
+2. the newest clearly supported review-capable model confirmed by a trustworthy source
 3. the CLI default, if model availability cannot be determined confidently
 
 Do not downgrade to an older model just because the skill was tested on a different CLI version.
 If there is real confusion about model availability, omit `-m` and let Codex use its default model.
+In practice, ambiguity is the normal case. Prefer the default model unless you can verify a specific Codex model cleanly.
 
 ## How To Determine "Latest Available"
 
-Use the installed CLI's observable signals:
+Use only trustworthy signals:
 
-- model flags in help output
-- subcommand help that mentions model selection
-- config or validation surfaces that confirm supported model names
-- the official Codex models page when local enumeration is unavailable
+- an explicit local model-listing or validation mechanism, if the CLI provides one
+- the official Codex models page
+- a user-specified model
+
+Do not treat example model names shown in `codex --help` or subcommand help as proof that those models are available locally.
 
 If the CLI exposes a model listing command or equivalent, use it.
-If it does not, consult the official Codex models page and use the newest suitable model you can confirm there.
-If that still leaves ambiguity about what the local installation will accept, use the default model by omitting `-m`.
+If it does not, consult the official Codex models page.
+If local acceptance is still ambiguous after that, use the default model by omitting `-m`.
 
 ## Effort Selection
 
