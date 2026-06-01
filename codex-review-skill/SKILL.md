@@ -10,8 +10,9 @@ If you wrote the code, review it as if somebody else did and you do not trust it
 
 ## Tested Baseline
 
-- Tested with Codex CLI version: `0.115.0`
-- Last verified: `2026-03-25`
+- Tested with Codex CLI version: `0.128.0`
+- Last verified: `2026-05-03`
+- Default model at last verification: `gpt-5.5` (per `~/.codex/config.toml`)
 - If the installed Codex CLI version differs, briefly inform the user in chat and continue using [references/VERSION_POLICY.md](references/VERSION_POLICY.md).
 
 ## Non-Negotiable Rules
@@ -40,7 +41,7 @@ If you wrote the code, review it as if somebody else did and you do not trust it
 
 - Read [references/CLI_DISCOVERY.md](references/CLI_DISCOVERY.md) first when the installed CLI version, commands, or flags are unknown.
 - Read [references/CONTEXT_CONTINUITY.md](references/CONTEXT_CONTINUITY.md) before starting a new Codex session or when deciding between `resume`, `fork`, and a fresh run.
-- Read [references/VERSION_POLICY.md](references/VERSION_POLICY.md) when the detected CLI version differs from `0.115.0` or expected commands are missing.
+- Read [references/VERSION_POLICY.md](references/VERSION_POLICY.md) when the detected CLI version differs from `0.128.0` or expected commands are missing.
 - Read [references/MODEL_SELECTION.md](references/MODEL_SELECTION.md) when choosing a model or reasoning effort.
 - Read [references/REQUEST_COMPOSITION.md](references/REQUEST_COMPOSITION.md) when preparing the actual Codex CLI review request.
 - Read [references/QUESTION_POLICY.md](references/QUESTION_POLICY.md) before asking the user anything.

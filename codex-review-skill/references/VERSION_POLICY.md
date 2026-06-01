@@ -1,11 +1,11 @@
 # Version Policy
 
-This skill was tested with Codex CLI `0.115.0`.
+This skill was tested with Codex CLI `0.128.0`.
 Other versions are allowed. A mismatch is a compatibility event, not a failure condition.
 
 ## Required Mismatch Behavior
 
-When the detected Codex CLI version differs from `0.115.0`:
+When the detected Codex CLI version differs from `0.128.0`:
 
 1. briefly inform the user in chat
 2. continue with capability discovery
@@ -20,9 +20,9 @@ Use a short factual note. Keep it to one or two sentences.
 
 Recommended wording:
 
-`Codex CLI version note: this skill was tested with 0.115.0, and this system has <detected-version>. I’m proceeding with capability discovery and will adapt if the CLI surface differs.`
+`Codex CLI version note: this skill was tested with 0.128.0, and this system has <detected-version>. I’m proceeding with capability discovery and will adapt if the CLI surface differs.`
 
-If the detected version matches `0.115.0`, no mismatch note is needed.
+If the detected version matches `0.128.0`, no mismatch note is needed.
 
 ## Feature Mapping Rules
 
